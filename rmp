@@ -39,5 +39,5 @@ else:
 
     print("PK ID#:\t\t%s" % pkID)
     print("Full Name:\t%s %s" % (firstName, lastName))
-    print("Avg. Rating:\t%d" % avgRating)
+    print("Avg. Rating:\t%f" % avgRating)
     print("Num Ratings:\t%d" % numRatings)
