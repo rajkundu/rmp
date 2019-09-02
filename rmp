@@ -1,26 +1,27 @@
 #!/usr/bin/python3
 
+import sys
 import argparse
 import json
 import urllib3
-from bs4 import BeautifulSoup
 
 #Command-Line Arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("name", type = str, help = "Instructor's Name")
-parser.add_argument('-w', dest = "openWebpage", action='store_true', help = "Open Instructor Webpage")
+parser.add_argument('-w', dest = "openWebpage", action='store_true', help = "Opens instructor webpage")
+parser.add_argument('-d', dest = "getDifficulty", action='store_true', help = "Retrieves difficulty rating (slower, parses instructor webpage)")
 parser.add_argument("-s", "--school", dest = "schoolID", type = int, default = 1350, help="RMP School ID Number")
 clArgs = parser.parse_args()
-
-def getData(url):
-    http = urllib3.PoolManager()
-    r = http.request("GET", url)
-    return BeautifulSoup(r.data,'lxml')
 
 url = "https://solr-aws-elb-production.ratemyprofessors.com//solr/rmp/select/?solrformat=true&rows=20&wt=json&json.wrf=noCB&callback=noCB&defType=edismax&qf=teacherfirstname_t%5E2000+teacherlastname_t%5E2000+teacherfullname_t%5E2000+autosuggest&bf=pow(total_number_of_ratings_i%2C2.1)&sort=total_number_of_ratings_i+desc&siteName=rmp&rows=20&start=0&fl=pk_id+teacherfirstname_t+teacherlastname_t+total_number_of_ratings_i+averageratingscore_rf+schoolid_s&q=" + clArgs.name + "+AND+schoolid_s%3A" + str(clArgs.schoolID) + "&fq="
 
 rawResponse = urllib3.PoolManager().request("GET", url).data.decode('utf-8')[5:-1]
 jsonResponse = json.loads(rawResponse)
+
+#Quit program if no result found
+if(jsonResponse["response"]["numFound"] == 0):
+    print("\033[91mERROR:\033[0m No results found for instructor \"\033[93m%s\033[0m\" at School #\033[93m%d\033[0m" % (clArgs.name, clArgs.schoolID))
+    sys.exit()
 
 pkID = jsonResponse["response"]["docs"][0]["pk_id"]
 
@@ -32,6 +33,9 @@ else:
     lastName = jsonResponse["response"]["docs"][0]["teacherlastname_t"]
     avgRating = jsonResponse["response"]["docs"][0]["averageratingscore_rf"]
     numRatings = jsonResponse["response"]["docs"][0]["total_number_of_ratings_i"]
+    if(clArgs.getDifficulty):
+        from bs4 import BeautifulSoup
+        #NOT FINISHED
 
     print("PK ID#:\t\t%s" % pkID)
     print("Full Name:\t%s %s" % (firstName, lastName))
