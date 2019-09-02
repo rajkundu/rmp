@@ -13,9 +13,9 @@ parser.add_argument('-d', dest = "getDifficulty", action='store_true', help = "R
 parser.add_argument("-s", "--school", dest = "schoolID", type = int, default = 1350, help="RMP School ID Number")
 clArgs = parser.parse_args()
 
-url = "https://solr-aws-elb-production.ratemyprofessors.com//solr/rmp/select/?solrformat=true&rows=20&wt=json&json.wrf=noCB&callback=noCB&defType=edismax&qf=teacherfirstname_t%5E2000+teacherlastname_t%5E2000+teacherfullname_t%5E2000+autosuggest&bf=pow(total_number_of_ratings_i%2C2.1)&sort=total_number_of_ratings_i+desc&siteName=rmp&rows=20&start=0&fl=pk_id+teacherfirstname_t+teacherlastname_t+total_number_of_ratings_i+averageratingscore_rf+schoolid_s&q=" + clArgs.name + "+AND+schoolid_s%3A" + str(clArgs.schoolID) + "&fq="
+queryUrl = "https://solr-aws-elb-production.ratemyprofessors.com//solr/rmp/select/?solrformat=true&rows=20&wt=json&json.wrf=noCB&callback=noCB&defType=edismax&qf=teacherfirstname_t%5E2000+teacherlastname_t%5E2000+teacherfullname_t%5E2000+autosuggest&bf=pow(total_number_of_ratings_i%2C2.1)&sort=total_number_of_ratings_i+desc&siteName=rmp&rows=20&start=0&fl=pk_id+teacherfirstname_t+teacherlastname_t+total_number_of_ratings_i+averageratingscore_rf+schoolid_s&q=" + clArgs.name + "+AND+schoolid_s%3A" + str(clArgs.schoolID) + "&fq="
 
-rawResponse = urllib3.PoolManager().request("GET", url).data.decode('utf-8')[5:-1]
+rawResponse = urllib3.PoolManager().request("GET", queryUrl).data.decode('utf-8')[5:-1]
 jsonResponse = json.loads(rawResponse)
 
 #Quit program if no result found
@@ -39,5 +39,5 @@ else:
 
     print("PK ID#:\t\t%s" % pkID)
     print("Full Name:\t%s %s" % (firstName, lastName))
-    print("Avg. Rating:\t%f" % avgRating)
+    print("Avg. Rating:\t%.1f" % avgRating)
     print("Num Ratings:\t%d" % numRatings)
