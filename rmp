@@ -17,7 +17,7 @@ class bcolors:
 parser = argparse.ArgumentParser()
 parser.add_argument("name", type = str, help = "Instructor's Name")
 parser.add_argument('-w', dest = "openWebpage", action='store_true', help = "Opens instructor webpage")
-parser.add_argument('-d', dest = "getDifficulty", action='store_true', help = "Retrieves difficulty rating (slower, parses instructor webpage)")
+parser.add_argument('-b', dest = "basicMode", action='store_true', help = "Retrieves only basic information (faster, doesn't parse instructor's webpage for average difficulty rating)")
 parser.add_argument("-s", "--school", dest = "schoolID", type = int, default = 1350, help="RMP School ID Number")
 clArgs = parser.parse_args()
 
@@ -44,27 +44,29 @@ avgRating = jsonResponse["response"]["docs"][0]["averageratingscore_rf"]
 numRatings = jsonResponse["response"]["docs"][0]["total_number_of_ratings_i"]
 
 #Note: This parsing method relies on the ordering of ".grade" elements on RMP's webpage, so it may not work in the future
-if(clArgs.getDifficulty):
+if(~clArgs.basicMode):
     from bs4 import BeautifulSoup
     import re
     soup = BeautifulSoup(urllib3.PoolManager().request("GET", webpageURL).data, features="lxml")
     difficultyRating = float(soup.find_all('div', attrs = {"class": "grade"})[2].text.strip())
 
+colorCodeRatingScale = [0.0, 2.75, 3.75, 5.0]
 def colorCodeRating(rating):
-    if(rating < 3.0):
+    if(rating < colorCodeRatingScale[1]):
         return bcolors.FAIL
-    elif(rating < 3.75):
+    elif(rating < colorCodeRatingScale[2]):
         return bcolors.WARNING
     else:
         return bcolors.OKGREEN
 
+colorCodeDifficultyScale = [0.0, 2.5, 3.75, 5.0]
 def colorCodeDifficulty(rating):
-    if(rating < 2.0):
-        return bcolors.OKGREEN
-    elif(rating < 3.0):
+    if(rating > colorCodeDifficultyScale[2]):
+        return bcolors.FAIL
+    elif(rating > colorCodeDifficultyScale[1]):
         return bcolors.WARNING
     else:
-        return bcolors.FAIL
+        return bcolors.OKGREEN
 
 print("PK ID:\t\t\t%d" % (pkID))
 print("Full Name:\t\t%s %s" % (firstName, lastName))
