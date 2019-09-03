@@ -2,6 +2,7 @@
 
 import sys
 import argparse
+import math
 import json
 import urllib3
 
@@ -27,8 +28,13 @@ jsonResponse = json.loads(rawResponse)
 
 #Quit program if no result found
 if(jsonResponse["response"]["numFound"] == 0):
-    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + " No results found for instructor \"" + bcolors.WARNING + ("%s" % clArgs.name) + bcolors.ENDC + "\" at School #" + bcolors.WARNING + ("%d" % clArgs.schoolID) + bcolors.ENDC)
+    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + " No results found for instructor \"" + bcolors.HEADER + ("%s" % clArgs.name) + bcolors.ENDC + "\" at School #" + bcolors.HEADER + ("%d" % clArgs.schoolID) + bcolors.ENDC)
     sys.exit()
+elif(jsonResponse["response"]["numFound"] > 1):
+    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + " Ambiguous query; multiple results returned." + bcolors.WARNING + " Continue with first result? " + bcolors.ENDC, end = '')
+    continueParse = input("")
+    if("n" in continueParse.lower()):
+        sys.exit()
 
 pkID = jsonResponse["response"]["docs"][0]["pk_id"]
 webpageURL = "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=" + str(pkID)
@@ -40,6 +46,7 @@ if(clArgs.openWebpage):
 
 firstName = jsonResponse["response"]["docs"][0]["teacherfirstname_t"]
 lastName = jsonResponse["response"]["docs"][0]["teacherlastname_t"]
+fullName = firstName + " " + lastName
 avgRating = jsonResponse["response"]["docs"][0]["averageratingscore_rf"]
 numRatings = jsonResponse["response"]["docs"][0]["total_number_of_ratings_i"]
 
@@ -50,27 +57,35 @@ if(~clArgs.basicMode):
     soup = BeautifulSoup(urllib3.PoolManager().request("GET", webpageURL).data, features="lxml")
     difficultyRating = float(soup.find_all('div', attrs = {"class": "grade"})[2].text.strip())
 
-colorCodeRatingScale = [0.0, 2.75, 3.75, 5.0]
-def colorCodeRating(rating):
-    if(rating < colorCodeRatingScale[1]):
-        return bcolors.FAIL
-    elif(rating < colorCodeRatingScale[2]):
-        return bcolors.WARNING
+class colorScales:
+    rating = [0.0, 2.8, 4.0, 5.0]
+    difficulty = [0.0, 2.3, 3.5, 5.0]
+def colorCode(rating, colorScale, scaleFlipped = False):
+    if(scaleFlipped):
+        if(rating > colorScale[2]):
+            return bcolors.FAIL
+        elif(rating > colorScale[1]):
+            return bcolors.WARNING
+        else:
+            return bcolors.OKGREEN
     else:
-        return bcolors.OKGREEN
+        if(rating < colorScale[1]):
+            return bcolors.FAIL
+        elif(rating < colorScale[2]):
+            return bcolors.WARNING
+        else:
+            return bcolors.OKGREEN
 
-colorCodeDifficultyScale = [0.0, 2.5, 3.75, 5.0]
-def colorCodeDifficulty(rating):
-    if(rating > colorCodeDifficultyScale[2]):
-        return bcolors.FAIL
-    elif(rating > colorCodeDifficultyScale[1]):
-        return bcolors.WARNING
-    else:
-        return bcolors.OKGREEN
-
+#Make output banners responsive to length of instructor's name
+bannerSideLength = math.ceil((len(fullName) - 8) / 2.0)
+bannerSide = (10 + bannerSideLength) * '='
+print(bcolors.BOLD + bannerSide + " Query Result " + bannerSide + bcolors.ENDC)
 print("PK ID:\t\t\t%d" % (pkID))
-print("Full Name:\t\t%s %s" % (firstName, lastName))
+
+#Highlight instructor name if not exact query match
+print("Full Name:\t\t" + ("" if (clArgs.name.lower() == fullName.lower()) else bcolors.HEADER) + fullName + bcolors.ENDC)
+print(bcolors.BOLD + bannerSide + " Ratings Info " + bannerSide + bcolors.ENDC)
 print("# Ratings:\t\t%d" % numRatings)
-print("Avg. Rating:\t\t" + colorCodeRating(avgRating) + "%.1f" % avgRating + bcolors.ENDC)
+print("Avg. Rating:\t\t" + colorCode(avgRating, colorScales.rating) + bcolors.BOLD + "%.1f" % avgRating + bcolors.ENDC)
 if(~clArgs.basicMode):
-    print("Avg. Difficulty:\t" + colorCodeDifficulty(difficultyRating) + "%.1f" % difficultyRating + bcolors.ENDC)
+    print("Avg. Difficulty:\t" + colorCode(difficultyRating, colorScales.difficulty, True) + bcolors.BOLD + "%.1f" % difficultyRating + bcolors.ENDC)
