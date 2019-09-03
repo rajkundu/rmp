@@ -16,8 +16,8 @@ class bcolors:
 #Command-Line Arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("name", type = str, help = "Instructor's Name")
-parser.add_argument('-w', dest = "openWebpage", action='store_true', help = "Opens instructor webpage")
-parser.add_argument('-b', dest = "basicMode", action='store_true', help = "Retrieves only basic information (faster, doesn't parse instructor's webpage for average difficulty rating)")
+parser.add_argument('-w', "--web", dest = "openWebpage", action='store_true', help = "Opens instructor webpage")
+parser.add_argument('-b', "--basic", dest = "basicMode", action='store_true', help = "Retrieves only basic information (faster, doesn't parse instructor's webpage for average difficulty rating)")
 parser.add_argument("-s", "--school", dest = "schoolID", type = int, default = 1350, help="RMP School ID Number")
 clArgs = parser.parse_args()
 
@@ -72,5 +72,5 @@ print("PK ID:\t\t\t%d" % (pkID))
 print("Full Name:\t\t%s %s" % (firstName, lastName))
 print("# Ratings:\t\t%d" % numRatings)
 print("Avg. Rating:\t\t" + colorCodeRating(avgRating) + "%.1f" % avgRating + bcolors.ENDC)
-if(clArgs.getDifficulty):
+if(~clArgs.basicMode):
     print("Avg. Difficulty:\t" + colorCodeDifficulty(difficultyRating) + "%.1f" % difficultyRating + bcolors.ENDC)
