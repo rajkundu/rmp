@@ -5,6 +5,14 @@ import argparse
 import json
 import urllib3
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+
 #Command-Line Arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("name", type = str, help = "Instructor's Name")
@@ -19,30 +27,48 @@ jsonResponse = json.loads(rawResponse)
 
 #Quit program if no result found
 if(jsonResponse["response"]["numFound"] == 0):
-    print("\033[91mERROR:\033[0m No results found for instructor \"\033[93m%s\033[0m\" at School #\033[93m%d\033[0m" % (clArgs.name, clArgs.schoolID))
+    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + " No results found for instructor \"" + bcolors.WARNING + ("%s" % clArgs.name) + bcolors.ENDC + "\" at School #" + bcolors.WARNING + ("%d" % clArgs.schoolID) + bcolors.ENDC)
     sys.exit()
 
 pkID = jsonResponse["response"]["docs"][0]["pk_id"]
+webpageURL = "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=" + str(pkID)
 
 if(clArgs.openWebpage):
     import webbrowser
-    webbrowser.open_new_tab("https://www.ratemyprofessors.com/ShowRatings.jsp?tid=" + str(pkID))
-else:
-    firstName = jsonResponse["response"]["docs"][0]["teacherfirstname_t"]
-    lastName = jsonResponse["response"]["docs"][0]["teacherlastname_t"]
-    avgRating = jsonResponse["response"]["docs"][0]["averageratingscore_rf"]
-    numRatings = jsonResponse["response"]["docs"][0]["total_number_of_ratings_i"]
+    webbrowser.open_new_tab(webpageURL)
+    sys.exit()
 
-    #Note: This parsing method relies on the ordering of ".grade" elements on RMP's webpage, so it may not work in the future
-    if(clArgs.getDifficulty):
-        from bs4 import BeautifulSoup
-        import re
-        soup = BeautifulSoup(urllib3.PoolManager().request("GET", "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=" + str(pkID)).data, features="lxml")
-        difficultyRating = float(soup.find_all('div', attrs = {"class": "grade"})[2].text.strip())
+firstName = jsonResponse["response"]["docs"][0]["teacherfirstname_t"]
+lastName = jsonResponse["response"]["docs"][0]["teacherlastname_t"]
+avgRating = jsonResponse["response"]["docs"][0]["averageratingscore_rf"]
+numRatings = jsonResponse["response"]["docs"][0]["total_number_of_ratings_i"]
 
-    print("PK ID#:\t\t%s" % pkID)
-    print("Full Name:\t%s %s" % (firstName, lastName))
-    print("Avg. Rating:\t%.1f" % avgRating)
-    print("Num Ratings:\t%d" % numRatings)
-    if(clArgs.getDifficulty):
-        print("Difficulty:\t%.1f" % difficultyRating)
+#Note: This parsing method relies on the ordering of ".grade" elements on RMP's webpage, so it may not work in the future
+if(clArgs.getDifficulty):
+    from bs4 import BeautifulSoup
+    import re
+    soup = BeautifulSoup(urllib3.PoolManager().request("GET", webpageURL).data, features="lxml")
+    difficultyRating = float(soup.find_all('div', attrs = {"class": "grade"})[2].text.strip())
+
+def colorCodeRating(rating):
+    if(rating < 3.0):
+        return bcolors.FAIL
+    elif(rating < 3.75):
+        return bcolors.WARNING
+    else:
+        return bcolors.OKGREEN
+
+def colorCodeDifficulty(rating):
+    if(rating < 2.0):
+        return bcolors.OKGREEN
+    elif(rating < 3.0):
+        return bcolors.WARNING
+    else:
+        return bcolors.FAIL
+
+print("PK ID:\t\t\t%d" % (pkID))
+print("Full Name:\t\t%s %s" % (firstName, lastName))
+print("# Ratings:\t\t%d" % numRatings)
+print("Avg. Rating:\t\t" + colorCodeRating(avgRating) + "%.1f" % avgRating + bcolors.ENDC)
+if(clArgs.getDifficulty):
+    print("Avg. Difficulty:\t" + colorCodeDifficulty(difficultyRating) + "%.1f" % difficultyRating + bcolors.ENDC)
