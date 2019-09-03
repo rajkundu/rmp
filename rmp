@@ -59,7 +59,7 @@ if(~clArgs.basicMode):
 
 class colorScales:
     rating = [0.0, 2.8, 4.0, 5.0]
-    difficulty = [0.0, 2.3, 3.5, 5.0]
+    difficulty = [0.0, 2.5, 3.5, 5.0]
 def colorCode(rating, colorScale, scaleFlipped = False):
     if(scaleFlipped):
         if(rating > colorScale[2]):
