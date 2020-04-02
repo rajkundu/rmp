@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3
 
 import sys
 import argparse
@@ -27,16 +27,31 @@ rawResponse = urllib3.PoolManager().request("GET", queryUrl).data.decode('utf-8'
 jsonResponse = json.loads(rawResponse)
 
 #Quit program if no result found
-if(jsonResponse["response"]["numFound"] == 0):
+numResults = jsonResponse["response"]["numFound"]
+if(numResults == 0):
     print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + " No results found for instructor \"" + bcolors.HEADER + ("%s" % clArgs.name) + bcolors.ENDC + "\" at School #" + bcolors.HEADER + ("%d" % clArgs.schoolID) + bcolors.ENDC)
     sys.exit()
-elif(jsonResponse["response"]["numFound"] > 1):
-    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + " Ambiguous query; multiple results returned." + bcolors.WARNING + " Continue with first result? " + bcolors.ENDC, end = '')
-    continueParse = input("")
-    if("n" in continueParse.lower()):
-        sys.exit()
+elif(numResults > 1):
+    print(bcolors.WARNING + bcolors.BOLD + "WARNING:" + bcolors.ENDC + (" Ambiguous query; continue with which result (1-%d, 0 to exit)? " % numResults) + bcolors.ENDC, end = '')
+    invalidInput = True
+    while(invalidInput):
+        resultNumStr = input("")
+        try:
+            resultNum = int(resultNumStr)
+            if(resultNum < 1):
+                sys.exit()
+            elif(resultNum > numResults):
+                print(("Please enter a number between 1 and %d (0 to exit): " % numResults), end = '')
+            else:
+                #Convert result number to index (i.e. 1 -> 0)
+                resultNum = resultNum - 1
+                invalidInput = False
+        except ValueError as e:
+            print("Please enter a valid number (0 to exit): ", end = '')
+else:
+    resultNum = 0
 
-pkID = jsonResponse["response"]["docs"][0]["pk_id"]
+pkID = jsonResponse["response"]["docs"][resultNum]["pk_id"]
 webpageURL = "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=" + str(pkID)
 
 if(clArgs.openWebpage):
@@ -44,21 +59,36 @@ if(clArgs.openWebpage):
     webbrowser.open_new_tab(webpageURL)
     sys.exit()
 
-firstName = jsonResponse["response"]["docs"][0]["teacherfirstname_t"]
-lastName = jsonResponse["response"]["docs"][0]["teacherlastname_t"]
+
+firstName = jsonResponse["response"]["docs"][resultNum]["teacherfirstname_t"]
+lastName = jsonResponse["response"]["docs"][resultNum]["teacherlastname_t"]
 fullName = firstName + " " + lastName
-avgRating = jsonResponse["response"]["docs"][0]["averageratingscore_rf"]
-numRatings = jsonResponse["response"]["docs"][0]["total_number_of_ratings_i"]
+
+try:
+    avgRating = jsonResponse["response"]["docs"][resultNum]["averageratingscore_rf"]
+except KeyError as e:
+    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + (" %s %s's average rating is not in the RMP database." % (firstName.capitalize(), lastName.capitalize())))
+    print("Instructor ID: %d" % pkID)
+    sys.exit()
+try:
+    numRatings = jsonResponse["response"]["docs"][resultNum]["total_number_of_ratings_i"]
+except KeyError as e:
+    print(bcolors.FAIL + bcolors.BOLD + "ERROR:" + bcolors.ENDC + (" %s %s's total number of ratings is not in the RMP database." % (firstName.capitalize(), lastName.capitalize())))
+    print("Instructor ID: %d" % pkID)
+    sys.exit()
 
 #Note: This parsing method relies on the ordering of ".grade" elements on RMP's webpage, so it may not work in the future
 if(~clArgs.basicMode):
     from bs4 import BeautifulSoup
     import re
     soup = BeautifulSoup(urllib3.PoolManager().request("GET", webpageURL).data, features="lxml")
-    difficultyRating = float(soup.find_all('div', attrs = {"class": "grade"})[2].text.strip())
+    difficultyRatingRegex = re.compile('FeedbackItem__FeedbackNumber.*')
+    difficultyRating = float(soup.find_all('div', attrs = {"class": difficultyRatingRegex})[1].text.strip())
 
 class colorScales:
+    # [Red, Red) [Yellow, Yellow) [Green, Green]; upper limits are EXCLUSIVE
     rating = [0.0, 2.8, 4.0, 5.0]
+    # [Green, Green] (Yellow, Yellow] (Red, Red]; upper limits are INCLUSIVE
     difficulty = [0.0, 2.5, 3.5, 5.0]
 def colorCode(rating, colorScale, scaleFlipped = False):
     if(scaleFlipped):
