@@ -3,9 +3,9 @@
 Written in **Python 3**
 
 ## Dependencies
-* argparse
 * urllib3
 * bs4 (BeautifulSoup 4)
+Install using `pip install -r requirements.txt`
 
 ## Usage
 `rmp [-h] [-w] [-b] [-s SCHOOLID] name`
