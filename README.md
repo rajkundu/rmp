@@ -6,7 +6,10 @@ Written in **Python 3**
 * `urllib3` (tested w/ v1.25.8)
 * `beautifulsoup4` (tested w/ v4.8.0)
 
-* Install using `pip install -r requirements.txt`
+## Installation
+1. Clone this repo and navigate to that folder
+2. Install the dependencies using `pip install -r requirements.txt`
+3. You can run the rmp file from any folder (`./rmp`), but I find it easiest to copy it to `/usr/local/bin/` (at least on my Mac). To do that, run the following from this repo's folder: `cp ./rmp /usr/local/bin/rmp`
 
 ## Usage
 `rmp [-h] [-w] [-b] [-s SCHOOLID] name`
