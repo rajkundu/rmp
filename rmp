@@ -54,11 +54,13 @@ else:
 pkID = jsonResponse["response"]["docs"][resultNum]["pk_id"]
 webpageURL = "https://www.ratemyprofessors.com/ShowRatings.jsp?tid=" + str(pkID)
 
-if(clArgs.openWebpage):
+def openWebpage():
     import webbrowser
     webbrowser.open_new_tab(webpageURL)
-    sys.exit()
 
+if(clArgs.openWebpage):
+    openWebpage()
+    sys.exit()
 
 firstName = jsonResponse["response"]["docs"][resultNum]["teacherfirstname_t"]
 lastName = jsonResponse["response"]["docs"][resultNum]["teacherlastname_t"]
@@ -78,12 +80,18 @@ except KeyError as e:
     sys.exit()
 
 #Note: This parsing method relies on the ordering of ".grade" elements on RMP's webpage, so it may not work in the future
-if(~clArgs.basicMode):
-    from bs4 import BeautifulSoup
-    import re
-    soup = BeautifulSoup(urllib3.PoolManager().request("GET", webpageURL).data, features="lxml")
-    difficultyRatingRegex = re.compile('FeedbackItem__FeedbackNumber.*')
-    difficultyRating = float(soup.find_all('div', attrs = {"class": difficultyRatingRegex})[1].text.strip())
+try:
+    if(~clArgs.basicMode):
+        from bs4 import BeautifulSoup
+        import re
+        soup = BeautifulSoup(urllib3.PoolManager().request("GET", webpageURL).data, features="lxml")
+        difficultyRatingRegex = re.compile('FeedbackItem__FeedbackNumber.*')
+        difficultyRating = float(soup.find_all('div', attrs = {"class": difficultyRatingRegex})[-1].text.strip())
+except Exception as e:
+    print(bcolors.FAIL + bcolors.BOLD + "An error has occurred: " + e + bcolors.ENDC)
+    print("Opening webpage...")
+    openWebpage()
+    sys.exit()
 
 class colorScales:
     # [Red, Red) [Yellow, Yellow) [Green, Green]; upper limits are EXCLUSIVE
